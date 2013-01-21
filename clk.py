@@ -10,6 +10,7 @@ LOCALE['days'] = '%s days'
 LOCALE['hours'] = '%s hours'
 LOCALE['minutes'] = '%s minutes'
 LOCALE['seconds'] = '%s seconds'
+LOCALE['clock'] = 'Clocking %s at %s %s'
 
 CONFIG=dict()
 CONFIG['file'] = '.clk'
@@ -68,7 +69,17 @@ def addLine(line):
 		print LOCALE['ioerror'] % (filePath,'appending')
 		sys.exit(1)
 	else:
-		print 'Clocking %s at %d' % (line,time.time())
+		unixTime = time.time()
+		dateObj = datetime.datetime.fromtimestamp(unixTime)
+		dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
+		timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
+		if line == 'in':
+			line = hi(line, CONFIG['hi_in'])
+		elif line == 'out':
+			line = hi(line, CONFIG['hi_out'])
+
+		print LOCALE['clock'] % (line, dateString, timeString)
+
 		temp.write('%d %s\n' % (time.time(),line))
 		temp.close()
 

@@ -23,3 +23,7 @@ List the full log as a summary:
 List the full log as a daily summary:
 
 	./clk.py day|days|daily
+
+List a simple in/out status:
+
+	./clk.py st|state|status

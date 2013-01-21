@@ -223,6 +223,23 @@ def summarizeDays():
 	if state == 'in':
 		print hi(LOCALE['currently_working'], CONFIG['hi_now'])
 
+def printStatus():
+	state = 'out'
+
+	try:
+		temp = open(filePath,'r+')
+	except IOError:
+		print LOCALE['ioerror'] % (filePath,'reading')
+		sys.exit(1)
+	else:
+		lines = [line.strip() for line in temp]
+		for line in lines:
+			match = RE['line'].search(line)
+			if match!=None:
+				state = match.group(2)
+
+	print state
+
 def main(argv):
 	if len(argv)==0:
 		printLines()
@@ -230,10 +247,12 @@ def main(argv):
 		addLine(argv[0])
 	elif argv[0] == 'print':
 		printLines()
-	elif argv[0] in ('sum','summary'):
+	elif argv[0] in ('sum', 'summary'):
 		summarizeLines()
 	elif argv[0] in ('day', 'days', 'daily'):
 		summarizeDays()
+	elif argv[0] in ('st', 'status', 'state'):
+		printStatus()
 
 if __name__=='__main__':
 	main(sys.argv[1:])

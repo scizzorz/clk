@@ -12,8 +12,9 @@ CONFIG['file'] = '.clk'
 
 CONFIG['hi_in'] = 11
 CONFIG['hi_out'] = 8
-CONFIG['hi_date'] = 2
-CONFIG['hi_time'] = 4
+CONFIG['hi_date'] = 12
+CONFIG['hi_time'] = 13
+CONFIG['hi_now'] = 9
 
 RE = dict()
 RE['line'] = re.compile('(\d+) (\w+)')
@@ -67,14 +68,61 @@ def printLines():
 
 				print '%s %s %s' % (dateString, timeString, status)
 
+def summarizeLines():
+	state = 'out'
+	startUnix = 0
+	startTime = 'none'
+	startDate = 'none'
+	startStatus = 'none'
+	try:
+		temp = open(filePath,'r+')
+	except IOError:
+		print LOCALE['ioerror'] % (filePath,'reading')
+		sys.exit(1)
+	else:
+		lines = [line.strip() for line in temp]
+		for line in lines:
+			match = RE['line'].search(line)
+			if match!=None:
+				unixTime = int(match.group(1))
+				dateObj = datetime.datetime.fromtimestamp(unixTime)
+				dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
+				timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
+
+				status = match.group(2)
+				if status == 'in':
+					status = hi(status, CONFIG['hi_in'])
+				elif status == 'out':
+					status = hi(status, CONFIG['hi_out'])
+
+				thisState = match.group(2)
+				if state != thisState:
+					if thisState == 'out':
+						print '%s %s until %s %s: %s' % (startDate, startTime, dateString, timeString, timeToString(unixTime - startUnix))
+					elif thisState == 'in':
+						startUnix = unixTime
+						startDate = dateString
+						startTime = timeString
+						startStatus = status
+					state = thisState
+
+	if state == 'in':
+		unixTime = time.time()
+		dateObj = datetime.datetime.fromtimestamp(unixTime)
+		dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
+		timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
+		print '%s %s %s %s %s: %s' % (startDate, startTime, hi('until',CONFIG['hi_now']), dateString, timeString, timeToString(unixTime - startUnix))
+
 
 def main(argv):
 	if len(argv)==0:
-		print 'no command'
+		printLines()
 	elif argv[0] == 'in' or argv[0] == 'out':
 		addLine(argv[0])
 	elif argv[0] == 'print':
 		printLines()
+	elif argv[0] in ('sum','summary'):
+		summarizeLines()
 
 if __name__=='__main__':
 	main(sys.argv[1:])

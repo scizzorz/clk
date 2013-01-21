@@ -29,6 +29,9 @@ def hi(string, color):
 	else:
 		return "\033[%dm%s\033[0m" % (color+82,string)
 
+def timeToString(val):
+	return '%d seconds' % int(val)
+
 def addLine(line):
 	try:
 		temp = open(filePath,'a+')

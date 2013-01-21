@@ -228,9 +228,10 @@ def printStatus():
 
 	try:
 		if os.path.exists(filePath):
-			temp = open(filePath,'r+')
+			temp = open(filePath,'r')
 		else:
-			temp = open(filePath, 'w+')
+			print state
+			return
 	except IOError:
 		print LOCALE['ioerror'] % (filePath,'reading')
 		sys.exit(1)

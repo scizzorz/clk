@@ -224,10 +224,13 @@ def summarizeDays():
 		print hi(LOCALE['currently_working'], CONFIG['hi_now'])
 
 def printStatus():
-	state = 'out'
+	state = 'none'
 
 	try:
-		temp = open(filePath,'r+')
+		if os.path.exists(filePath):
+			temp = open(filePath,'r+')
+		else:
+			temp = open(filePath, 'w+')
 	except IOError:
 		print LOCALE['ioerror'] % (filePath,'reading')
 		sys.exit(1)

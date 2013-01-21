@@ -11,6 +11,7 @@ LOCALE['hours'] = '%s hours'
 LOCALE['minutes'] = '%s minutes'
 LOCALE['seconds'] = '%s seconds'
 LOCALE['clock'] = 'Clocking %s at %s %s'
+LOCALE['currently_working'] = 'Currently clocked in'
 
 CONFIG=dict()
 CONFIG['file'] = '.clk'
@@ -156,6 +157,7 @@ def summarizeLines():
 		dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
 		timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
 		print '%s %s %s %s %s: %s' % (startDate, startTime, hi('until',CONFIG['hi_now']), dateString, timeString, timeToString(unixTime - startUnix))
+		print hi(LOCALE['currently_working'], CONFIG['hi_now'])
 
 def summarizeDays():
 	state = 'out'
@@ -217,6 +219,9 @@ def summarizeDays():
 		print '%s %s' % (hi(key, CONFIG['hi_date']), timeToString(val))
 
 	print '%s %s' % (hi('total', CONFIG['hi_now']), timeToString(totalTime))
+
+	if state == 'in':
+		print hi(LOCALE['currently_working'], CONFIG['hi_now'])
 
 def main(argv):
 	if len(argv)==0:

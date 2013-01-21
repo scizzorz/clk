@@ -6,6 +6,10 @@ LOCALE=dict()
 LOCALE['ioerror']="Unable to open file '%s' for %s"
 LOCALE['date'] = '%D'
 LOCALE['time'] = '%H:%M'
+LOCALE['days'] = '%s days'
+LOCALE['hours'] = '%s hours'
+LOCALE['minutes'] = '%s minutes'
+LOCALE['seconds'] = '%s seconds'
 
 CONFIG=dict()
 CONFIG['file'] = '.clk'
@@ -15,6 +19,10 @@ CONFIG['hi_out'] = 8
 CONFIG['hi_date'] = 12
 CONFIG['hi_time'] = 13
 CONFIG['hi_now'] = 9
+CONFIG['hi_days'] = 8
+CONFIG['hi_hours'] = 9
+CONFIG['hi_minutes'] = 10
+CONFIG['hi_seconds'] = 11
 
 RE = dict()
 RE['line'] = re.compile('(\d+) (\w+)')
@@ -31,7 +39,27 @@ def hi(string, color):
 		return "\033[%dm%s\033[0m" % (color+82,string)
 
 def timeToString(val):
-	return '%d seconds' % int(val)
+	val = int(val)
+	days = val / 86400
+	hours = (val % 86400) / 3600
+	minutes = (val % 3600) / 60
+	seconds = val % 60
+
+	builder = []
+
+	if days>0:
+		builder.append(LOCALE['days'] % hi(days, CONFIG['hi_days']))
+
+	if hours>0:
+		builder.append(LOCALE['hours'] % hi(hours, CONFIG['hi_hours']))
+
+	if minutes>0:
+		builder.append(LOCALE['minutes'] % hi(minutes, CONFIG['hi_minutes']))
+
+	if seconds>0:
+		builder.append(LOCALE['seconds'] % hi(seconds, CONFIG['hi_seconds']))
+
+	return ', '.join(builder)
 
 def addLine(line):
 	try:

@@ -73,12 +73,13 @@ def addLine(line):
 		dateObj = datetime.datetime.fromtimestamp(unixTime)
 		dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
 		timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
-		if line == 'in':
-			line = hi(line, CONFIG['hi_in'])
-		elif line == 'out':
-			line = hi(line, CONFIG['hi_out'])
+		status = line
+		if status == 'in':
+			status = hi(status, CONFIG['hi_in'])
+		elif status == 'out':
+			status = hi(status, CONFIG['hi_out'])
 
-		print LOCALE['clock'] % (line, dateString, timeString)
+		print LOCALE['clock'] % (status, dateString, timeString)
 
 		temp.write('%d %s\n' % (time.time(),line))
 		temp.close()

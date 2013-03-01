@@ -147,7 +147,8 @@ def summarize_lines():
 		if state != match.status:
 			# clocked out at this time, add it up and summarize
 			if match.status == 'out':
-				print '%s %s until %s %s: %s' % (current.date_str, current.time_str, match.date_str, match.time_str, time_to_string(match.unix_time - current.unix_time))
+				if match.unix_time > current.unix_time:
+					print '%s %s until %s %s: %s' % (current.date_str, current.time_str, match.date_str, match.time_str, time_to_string(match.unix_time - current.unix_time))
 
 			# clocked in at this time, reset the last clock position
 			elif match.status == 'in':
@@ -159,7 +160,8 @@ def summarize_lines():
 	if state == 'in':
 		match = ClockLine(time.time(), 'out')
 
-		print '%s %s %s %s %s: %s' % (current.date_str, current.time_str, highlight('until', CONFIG['hi_now']), match.date_str, match.time_str, time_to_string(match.unix_time - current.unix_time))
+		if match.unix_time - current.unix_time:
+			print '%s %s %s %s %s: %s' % (current.date_str, current.time_str, highlight('until', CONFIG['hi_now']), match.date_str, match.time_str, time_to_string(match.unix_time - current.unix_time))
 		print highlight(LOCALE['currently_working'], CONFIG['hi_now'])
 
 def summarize_days():
@@ -201,9 +203,11 @@ def summarize_days():
 		total_time += match.unix_time - current.unix_time
 
 	for key, val in sorted(days.iteritems()):
-		print '%s %s' % (highlight(key, CONFIG['hi_date']), time_to_string(val))
+		if val > 0:
+			print '%s %s' % (highlight(key, CONFIG['hi_date']), time_to_string(val))
 
-	print '%s %s' % (highlight('total', CONFIG['hi_now']), time_to_string(total_time))
+	if total_time > 0:
+		print '%s %s' % (highlight('total', CONFIG['hi_now']), time_to_string(total_time))
 
 	if state == 'in':
 		print highlight(LOCALE['currently_working'], CONFIG['hi_now'])

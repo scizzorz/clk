@@ -1,9 +1,42 @@
 #!/usr/bin/env python
-import sys, os, getopt, md5, re, time, tempfile, datetime
+import sys, os, re, time, datetime
 from os.path import expanduser
 
-LOCALE=dict()
-LOCALE['ioerror']="Unable to open file '%s' for %s"
+class ClockLine:
+	def __init__(self, match = None, status = None):
+		if match is None:
+			self.unix_time = 0
+			self.date_str = 'none'
+			self.time_str = 'none'
+			self.status = 'none'
+		elif status is not None and match is not None and (type(match) is int or type(match) is float):
+			self.unix_time = match
+			self.date = datetime.datetime.fromtimestamp(self.unix_time)
+			self.date_str = highlight(self.date.strftime(LOCALE['date']), CONFIG['hi_date'])
+			self.time_str = highlight(self.date.strftime(LOCALE['time']), CONFIG['hi_time'])
+			self.status = status
+		else:
+			self.unix_time = int(match.group(1))
+			self.date = datetime.datetime.fromtimestamp(self.unix_time)
+			self.date_str = highlight(self.date.strftime(LOCALE['date']), CONFIG['hi_date'])
+			self.time_str = highlight(self.date.strftime(LOCALE['time']), CONFIG['hi_time'])
+			self.status = match.group(2)
+
+		if self.status == 'in':
+			self.cstatus = highlight(self.status, CONFIG['hi_in'])
+		elif self.status == 'out':
+			self.cstatus = highlight(self.status, CONFIG['hi_out'])
+
+	def copy(self, copyee):
+		self.unix_time = copyee.unix_time
+		self.date = copyee.date
+		self.date_str = copyee.date_str
+		self.time_str = copyee.time_str
+		self.status = copyee.status
+
+
+LOCALE = dict()
+LOCALE['ioerror'] = "Unable to open file '%s' for %s"
 LOCALE['date'] = '%D'
 LOCALE['time'] = '%H:%M'
 LOCALE['days'] = '%s days'
@@ -13,7 +46,7 @@ LOCALE['seconds'] = '%s seconds'
 LOCALE['clock'] = 'Clocking %s at %s %s'
 LOCALE['currently_working'] = 'Currently clocked in'
 
-CONFIG=dict()
+CONFIG = dict()
 CONFIG['file'] = '.clk'
 
 CONFIG['hi_in'] = 11
@@ -27,20 +60,22 @@ CONFIG['hi_minutes'] = 10
 CONFIG['hi_seconds'] = 11
 
 RE = dict()
-RE['line'] = re.compile('(\d+) (\w+)')
+RE['line'] = re.compile('^(\d+) (\w+) (.+)$')
 
-workingPath = os.getcwd()
-filePath = '%s/%s' % (workingPath,CONFIG['file'])
+working_dir = os.getcwd()
+file_path = '%s/%s' % (expanduser('~'), CONFIG['file'])
 
-def hi(string, color):
+def highlight(string, color):
 	color = int(color)
 	# xterm highlighting
-	if color<8:
-		return "\033[%dm%s\033[0m" % (color+30,string)
+	if color < 8:
+		color += 30
 	else:
-		return "\033[%dm%s\033[0m" % (color+82,string)
+		color += 82
 
-def timeToString(val):
+	return "\033[%dm%s\033[0m" % (color, string)
+
+def time_to_string(val):
 	val = int(val)
 	days = val / 86400
 	hours = (val % 86400) / 3600
@@ -49,214 +84,152 @@ def timeToString(val):
 
 	builder = []
 
-	if days>0:
-		builder.append(LOCALE['days'] % hi(days, CONFIG['hi_days']))
+	if days > 0:
+		builder.append(LOCALE['days'] % highlight(days, CONFIG['hi_days']))
 
-	if hours>0:
-		builder.append(LOCALE['hours'] % hi(hours, CONFIG['hi_hours']))
+	if hours > 0:
+		builder.append(LOCALE['hours'] % highlight(hours, CONFIG['hi_hours']))
 
-	if minutes>0:
-		builder.append(LOCALE['minutes'] % hi(minutes, CONFIG['hi_minutes']))
+	if minutes > 0:
+		builder.append(LOCALE['minutes'] % highlight(minutes, CONFIG['hi_minutes']))
 
-	if seconds>0:
-		builder.append(LOCALE['seconds'] % hi(seconds, CONFIG['hi_seconds']))
+	if seconds > 0:
+		builder.append(LOCALE['seconds'] % highlight(seconds, CONFIG['hi_seconds']))
 
 	return ', '.join(builder)
 
-def addLine(line):
+def append_line(line):
 	try:
-		temp = open(filePath,'a+')
+		temp = open(file_path,'a+')
 	except IOError:
-		print LOCALE['ioerror'] % (filePath,'appending')
+		print LOCALE['ioerror'] % (file_path,'appending')
 		sys.exit(1)
 	else:
-		unixTime = time.time()
-		dateObj = datetime.datetime.fromtimestamp(unixTime)
-		dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
-		timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
-		status = line
-		if status == 'in':
-			status = hi(status, CONFIG['hi_in'])
-		elif status == 'out':
-			status = hi(status, CONFIG['hi_out'])
+		line = ClockLine(time.time(), line)
 
-		print LOCALE['clock'] % (status, dateString, timeString)
+		print LOCALE['clock'] % (line.cstatus, line.date_str, line.time_str)
 
-		temp.write('%d %s\n' % (time.time(),line))
+		temp.write('%d %s %s\n' % (time.time(), line, working_dir))
 		temp.close()
 
-def printLines():
+def read_lines():
 	try:
-		temp = open(filePath,'r+')
+		# see if the file exists before we even try to open it...
+		if os.path.exists(file_path):
+			temp = open(file_path,'r+')
+		else:
+			return None
 	except IOError:
-		print LOCALE['ioerror'] % (filePath,'reading')
+		print LOCALE['ioerror'] % (file_path, 'reading')
 		sys.exit(1)
 	else:
-		lines = [line.strip() for line in temp]
-		for line in lines:
-			match = RE['line'].search(line)
-			if match!=None:
-				unixTime = int(match.group(1))
-				dateObj = datetime.datetime.fromtimestamp(unixTime)
-				dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
-				timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
+		# only get lines that match the regex
+		lines = [RE['line'].search(line) for line in temp if RE['line'].search(line)]
 
-				status = match.group(2)
-				if status == 'in':
-					status = hi(status, CONFIG['hi_in'])
-				elif status == 'out':
-					status = hi(status, CONFIG['hi_out'])
+		# only get lines that match the working directory
+		# and then convert them into a ClockLine object
+		lines = [ClockLine(match) for match in lines if match.group(3) == working_dir]
 
-				print '%s %s %s' % (dateString, timeString, status)
+		return lines
 
-def summarizeLines():
+
+def print_lines():
+	lines = read_lines()
+	for match in lines:
+		print '%s %s %s' % (match.date_str, match.time_str, match.cstatus)
+
+def summarize_lines():
 	state = 'out'
-	startUnix = 0
-	startTime = 'none'
-	startDate = 'none'
-	startStatus = 'none'
+	current = ClockLine()
 
-	totalTime = 0
+	lines = read_lines()
+	for match in lines:
+		if state != match.status:
+			# clocked out at this time, add it up and summarize
+			if match.status == 'out':
+				print '%s %s until %s %s: %s' % (current.date_str, current.time_str, match.date_str, match.time_str, time_to_string(match.unix_time - current.unix_time))
 
-	try:
-		temp = open(filePath,'r+')
-	except IOError:
-		print LOCALE['ioerror'] % (filePath,'reading')
-		sys.exit(1)
-	else:
-		lines = [line.strip() for line in temp]
-		for line in lines:
-			match = RE['line'].search(line)
-			if match!=None:
-				unixTime = int(match.group(1))
-				dateObj = datetime.datetime.fromtimestamp(unixTime)
-				dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
-				timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
+			# clocked in at this time, reset the last clock position
+			elif match.status == 'in':
+				current.copy(match)
 
-				status = match.group(2)
-				if status == 'in':
-					status = hi(status, CONFIG['hi_in'])
-				elif status == 'out':
-					status = hi(status, CONFIG['hi_out'])
-
-				thisState = match.group(2)
-				if state != thisState:
-					if thisState == 'out':
-						totalTime += unixTime - startUnix
-						print '%s %s until %s %s: %s' % (startDate, startTime, dateString, timeString, timeToString(unixTime - startUnix))
-					elif thisState == 'in':
-						startUnix = unixTime
-						startDate = dateString
-						startTime = timeString
-						startStatus = status
-					state = thisState
+			# set the current state
+			state = match.status
 
 	if state == 'in':
-		unixTime = time.time()
-		dateObj = datetime.datetime.fromtimestamp(unixTime)
-		dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
-		timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
-		print '%s %s %s %s %s: %s' % (startDate, startTime, hi('until',CONFIG['hi_now']), dateString, timeString, timeToString(unixTime - startUnix))
-		print hi(LOCALE['currently_working'], CONFIG['hi_now'])
+		match = ClockLine(time.time(), 'out')
 
-def summarizeDays():
+		print '%s %s %s %s %s: %s' % (current.date_str, current.time_str, highlight('until', CONFIG['hi_now']), match.date_str, match.time_str, time_to_string(match.unix_time - current.unix_time))
+		print highlight(LOCALE['currently_working'], CONFIG['hi_now'])
+
+def summarize_days():
 	state = 'out'
-	startUnix = 0
-	startKey = None
-	startTime = 'none'
-	startDate = 'none'
-	startStatus = 'none'
+	current = ClockLine()
+	start_key = None
 
-	totalTime = 0
+	total_time = 0
 
 	days = dict()
 
-	try:
-		temp = open(filePath,'r+')
-	except IOError:
-		print LOCALE['ioerror'] % (filePath,'reading')
-		sys.exit(1)
-	else:
-		lines = [line.strip() for line in temp]
-		for line in lines:
-			match = RE['line'].search(line)
-			if match!=None:
-				unixTime = int(match.group(1))
-				dateObj = datetime.datetime.fromtimestamp(unixTime)
-				dayKey = dateObj.strftime(LOCALE['date'])
-				dateString = hi(dateObj.strftime(LOCALE['date']), CONFIG['hi_date'])
-				timeString = hi(dateObj.strftime(LOCALE['time']), CONFIG['hi_time'])
+	lines = read_lines()
+	for match in lines:
+		current_key = match.date.strftime(LOCALE['date'])
 
-				status = match.group(2)
-				if status == 'in':
-					status = hi(status, CONFIG['hi_in'])
-				elif status == 'out':
-					status = hi(status, CONFIG['hi_out'])
+		if state != match.status:
+			# clocked out at this time, add it up and summarize
+			if match.status == 'out':
+				if start_key not in days:
+					days[start_key] = 0
 
-				thisState = match.group(2)
-				if state != thisState:
-					if thisState == 'out':
-						if startKey not in days:
-							days[startKey] = 0
-						days[startKey] += unixTime - startUnix
-						totalTime += unixTime - startUnix
-					elif thisState == 'in':
-						startUnix = unixTime
-						startKey = dayKey
-						startDate = dateString
-						startTime = timeString
-						startStatus = status
-					state = thisState
+				days[start_key] += match.unix_time - current.unix_time
+				total_time += match.unix_time - current.unix_time
+
+			# clocked in at this time, reset the last clock position
+			elif match.status == 'in':
+				start_key = current_key
+				current.copy(match)
+
+			state = match.status
 
 	if state == 'in':
-		unixTime = time.time()
-		if startKey not in days:
-			days[startKey] = 0
-		days[startKey] += unixTime - startUnix
-		totalTime += unixTime - startUnix
+		match = ClockLine(time.time(), 'out')
+
+		if start_key not in days:
+			days[start_key] = 0
+
+		days[start_key] += match.unix_time - current.unix_time
+		total_time += match.unix_time - current.unix_time
 
 	for key, val in sorted(days.iteritems()):
-		print '%s %s' % (hi(key, CONFIG['hi_date']), timeToString(val))
+		print '%s %s' % (highlight(key, CONFIG['hi_date']), time_to_string(val))
 
-	print '%s %s' % (hi('total', CONFIG['hi_now']), timeToString(totalTime))
+	print '%s %s' % (highlight('total', CONFIG['hi_now']), time_to_string(total_time))
 
 	if state == 'in':
-		print hi(LOCALE['currently_working'], CONFIG['hi_now'])
+		print highlight(LOCALE['currently_working'], CONFIG['hi_now'])
 
-def printStatus():
+def print_status():
 	state = 'none'
 
-	try:
-		if os.path.exists(filePath):
-			temp = open(filePath,'r')
-		else:
-			print state
-			return
-	except IOError:
-		print LOCALE['ioerror'] % (filePath,'reading')
-		sys.exit(1)
-	else:
-		lines = [line.strip() for line in temp]
-		for line in lines:
-			match = RE['line'].search(line)
-			if match!=None:
-				state = match.group(2)
+	lines = read_lines()
+	for match in lines:
+		state = match.status
 
 	print state
 
 def main(argv):
-	if len(argv)==0:
-		printLines()
+	if len(argv) == 0:
+		print_lines()
 	elif argv[0] == 'in' or argv[0] == 'out':
-		addLine(argv[0])
+		append_line(argv[0])
 	elif argv[0] == 'print':
-		printLines()
+		print_lines()
 	elif argv[0] in ('sum', 'summary'):
-		summarizeLines()
+		summarize_lines()
 	elif argv[0] in ('day', 'days', 'daily'):
-		summarizeDays()
+		summarize_days()
 	elif argv[0] in ('st', 'status', 'state'):
-		printStatus()
+		print_status()
 
-if __name__=='__main__':
+if __name__ == '__main__':
 	main(sys.argv[1:])

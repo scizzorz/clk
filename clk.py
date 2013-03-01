@@ -109,7 +109,7 @@ def append_line(line):
 
 		print LOCALE['clock'] % (line.cstatus, line.date_str, line.time_str)
 
-		temp.write('%d %s %s\n' % (time.time(), line, working_dir))
+		temp.write('%d %s %s\n' % (time.time(), line.status, working_dir))
 		temp.close()
 
 def read_lines():

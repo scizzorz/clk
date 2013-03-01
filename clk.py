@@ -49,15 +49,15 @@ LOCALE['currently_working'] = 'Currently clocked in'
 CONFIG = dict()
 CONFIG['file'] = '.clk'
 
-CONFIG['hi_in'] = 11
-CONFIG['hi_out'] = 8
-CONFIG['hi_date'] = 12
-CONFIG['hi_time'] = 13
+CONFIG['hi_in'] = 2
+CONFIG['hi_out'] = 1
+CONFIG['hi_date'] = 14
+CONFIG['hi_time'] = 10
 CONFIG['hi_now'] = 9
-CONFIG['hi_days'] = 8
-CONFIG['hi_hours'] = 9
+CONFIG['hi_days'] = 4
+CONFIG['hi_hours'] = 12
 CONFIG['hi_minutes'] = 10
-CONFIG['hi_seconds'] = 11
+CONFIG['hi_seconds'] = 6
 
 RE = dict()
 RE['line'] = re.compile('^(\d+) (\w+) (.+)$')
